@@ -1,9 +1,24 @@
 export function isSupportedBrowser(global) {
+  // TODO: check browser name and version
+  // /Chrome\/(?<ver>7([345]))\./
   return [
     'RTCQuicTransport',
     'RTCIceTransport',
     'RTCQuicStream',
   ].every(key => key in global);
+}
+
+export function getRoomName(location) {
+  if (location.hash.length === 0) {
+    return null;
+  }
+
+  const hash = location.hash.slice(1);
+  if (/\d{8}/.test(hash) === false) {
+    return null;
+  }
+
+  return hash;
 }
 
 // from https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
