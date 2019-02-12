@@ -1,8 +1,9 @@
 import Eve from '../shared/events.js';
 import { ab2str, str2ab } from '../shared/utils.js';
+import DataChannel from './dc.js';
 
 // TODO: fix name
-export class PeerConnection extends Eve {
+export default class PeerConnection extends Eve {
   constructor() {
     super();
 
@@ -15,26 +16,6 @@ export class PeerConnection extends Eve {
     });
     this.quic.addEventListener('statechange', ev => {
       this.trigger(`quic:${ev.target.state}`);
-    });
-    this.quic.addEventListener('quicstream', async ev => {
-      const quicStream = ev.stream;
-
-      const CHUNK_SIZE = 256;
-      // need to wait first data
-      await quicStream.waitForReadable(CHUNK_SIZE);
-
-      let message = '';
-      let isAllDataRead = false;
-      while (!isAllDataRead) {
-        const buffer = new Uint8Array(CHUNK_SIZE);
-
-        const { finished } = quicStream.readInto(buffer);
-        message += new TextDecoder().decode(buffer);
-
-        isAllDataRead = finished;
-      }
-
-      this.trigger('message', message);
     });
   }
 
@@ -84,14 +65,9 @@ export class PeerConnection extends Eve {
     quic.connect();
   }
 
-  sendText(text) {
-    const { quic } = this;
-
-    const quicStream = quic.createStream();
-    quicStream.write({
-      data: new TextEncoder().encode(text),
-      finish: true,
-    });
+  createDataChannel() {
+    const dc = new DataChannel(this.quic);
+    return dc;
   }
 
   _gatherAllCandidates() {

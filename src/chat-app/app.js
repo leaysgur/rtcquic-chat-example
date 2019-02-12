@@ -1,9 +1,10 @@
 import { render, html } from '//unpkg.com/lighterhtml?module';
-import { PeerConnection } from './pc.js';
+import PeerConnection from './pc.js';
 
 export default function($root) {
   const refs = {
     pc: null,
+    dc: null,
   };
 
   const state = {
@@ -23,7 +24,6 @@ export default function($root) {
       refs.pc = new PeerConnection();
       refs.pc.on('quic:connected', action.onQuicConnected);
       refs.pc.on('quic:closed', action.onQuicClosed);
-      refs.pc.on('message', action.onMessage);
     },
     async getParams() {
       const offer = await refs.pc.createOffer();
@@ -50,6 +50,8 @@ export default function($root) {
     },
     onQuicConnected() {
       state.isSignalingDone = true;
+      refs.dc = refs.pc.createDataChannel();
+      refs.dc.on('message', action.onDCMessage);
 
       renderView($root, state, action);
     },
@@ -57,7 +59,7 @@ export default function($root) {
       alert('Quic connection closed!');
       location.reload(true);
     },
-    onMessage({ data }) {
+    onDCMessage({ data }) {
       state.messages.push(data);
       renderView($root, state, action);
     },
@@ -67,10 +69,10 @@ export default function($root) {
       }
 
       // remote
-      refs.pc.sendText(state.chatText);
+      refs.dc.sendText(state.chatText);
 
       // local
-      action.onMessage({ data: state.chatText });
+      action.onDCMessage({ data: state.chatText });
       state.chatText = '';
       renderView($root, state, action);
     },
@@ -81,7 +83,6 @@ export default function($root) {
 }
 
 function renderView($root, state, action) {
-  console.dir(state);
   render($root, () => html`
     <h2>QuicChat</h2>
     <section>
@@ -89,14 +90,13 @@ function renderView($root, state, action) {
         <h3>Chat</h3>
         <ul>
           ${ state.messages.map(msg => html`
-            <li>${msg}</li>
-          `) }
+          <li>${msg}</li>
+          `)}
         </ul>
-        <input
-          type="text"
+        <textarea
           value=${state.chatText}
           oninput=${ev => action.$update('chatText', ev.target.value)}
-        >
+        ></textarea>
         <button
           type="button"
           onclick=${action.sendText}
