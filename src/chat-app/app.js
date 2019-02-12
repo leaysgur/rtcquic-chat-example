@@ -62,19 +62,15 @@ export default function($root) {
       location.reload(true);
     },
     onDCMessage({ data }) {
-      state.messages.push(data);
+      state.messages.push({ from: 'remote', text: data });
       renderView($root, state, action);
     },
     sendText() {
-      if (state.chatText.trim().length === 0) {
-        return;
-      }
-
       // remote
       refs.dc.sendText(state.chatText);
 
       // local
-      action.onDCMessage({ data: state.chatText });
+      state.messages.push({ from: 'you', text: state.chatText });
       state.chatText = '';
       renderView($root, state, action);
     },
@@ -98,7 +94,7 @@ function renderView($root, state, action) {
 
 function renderSignalingView(state, action) {
   return html`
-    <h3 class="header">Step1. Signaling</h3>
+    <h3>Step1. Signaling</h3>
     <div>
       <h4>Params to send</h4>
       <textarea
@@ -128,26 +124,30 @@ function renderSignalingView(state, action) {
   `;
 }
 function renderChatView(state, action) {
+  const refs = { current: null };
   return html`
-    <h3 class="header">Step2. Chat</h3>
+    <h3>Step2. Chat</h3>
     <ul class="collection">
       ${ state.messages.length === 0 ? html`
       <li class="collection-item grey lighten-4">No messages</li>
       ` : null }
-      ${ state.messages.map(msg => html`
-      <li class="collection-item">${msg}</li>
+      ${ state.messages.map((msg, idx) => html`
+      <li data-i=${idx} class="collection-item">${msg.from}: ${msg.text}</li>
       `)}
     </ul>
     <input
       type="text"
-      value=${state.chatText}
+      ref=${refs}
       oninput=${ev => action.$update('chatText', ev.target.value)}
-      placeholder="Enter a message..."
-    >
+      placeholder="Enter a message.."
+    />
     <button
       class="waves-effect waves-light btn"
       type="button"
-      onclick=${action.sendText}
+      onclick=${() => {
+        action.sendText();
+        refs.current.value = '';
+      }}
     >Send</button>
   `;
 }
