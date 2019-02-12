@@ -16,6 +16,7 @@ export default class QuicPeerConnection extends Eve {
   }
 
   async getClientParams() {
+    // for VanillaICE
     await this._gatherAllCandidates();
 
     return {
@@ -27,6 +28,7 @@ export default class QuicPeerConnection extends Eve {
   }
 
   async getServerParams() {
+    // for VanillaICE
     await this._gatherAllCandidates();
 
     return {

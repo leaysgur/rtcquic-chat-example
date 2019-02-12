@@ -13,6 +13,7 @@ export default class DataChannel extends Eve {
       const quicStream = ev.stream;
 
       // wait for first message ready
+      // 1, minimum value means try to read data A.S.A.P.
       await quicStream.waitForReadable(1);
       this._readData(quicStream);
     });
