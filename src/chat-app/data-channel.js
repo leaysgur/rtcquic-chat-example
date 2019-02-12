@@ -20,6 +20,10 @@ export default class DataChannel extends Eve {
   }
 
   sendText(text) {
+    if (text.length === 0) {
+      return;
+    }
+
     const message = this.encoder.encode(text);
 
     this.quicStream.write({
