@@ -1,5 +1,5 @@
 import { render, html } from '//unpkg.com/lighterhtml?module';
-import PeerConnection from './peer-connection.js';
+import QuicPeerConnection from './quic-peer-connection.js';
 
 export default function($root) {
   const refs = {
@@ -10,8 +10,8 @@ export default function($root) {
   const state = {
     isSignalingDone: false,
     iceRole: '',
-    localSd: '',
-    remoteSd: '',
+    localParams: '',
+    remoteParams: '',
 
     // after signaling done
     chatText: '',
@@ -21,29 +21,31 @@ export default function($root) {
   const action = {
     $update(key, val) { state[key] = val; },
     init() {
-      refs.pc = new PeerConnection();
+      refs.pc = new QuicPeerConnection();
       refs.pc.on('quic:connected', action.onQuicConnected);
       refs.pc.on('quic:closed', action.onQuicClosed);
     },
     async getParams() {
-      const offer = await refs.pc.createOffer();
-      state.localSd = JSON.stringify(offer, null, 2);
-      state.iceRole = 'controlling';
+      const offer = await refs.pc.getClientParams();
+      state.localParams = JSON.stringify(offer, null, 2);
+      state.iceRole = offer.iceRole;
 
       renderView($root, state, action);
     },
     async setParams() {
       // answer side
-      if (state.localSd === '' && state.remoteSd !== '') {
-        const offer = JSON.parse(state.remoteSd);
-        const answer = await refs.pc.setLocalDescAndCreateAnswer(offer);
-        state.localSd = JSON.stringify(answer, null, 2);
-        state.iceRole = 'controlled';
+      if (state.localParams === '' && state.remoteParams !== '') {
+        const offer = JSON.parse(state.remoteParams);
+        await refs.pc.setClientParams(offer);
+
+        const answer = await refs.pc.getServerParams();
+        state.localParams = JSON.stringify(answer, null, 2);
+        state.iceRole = answer.iceRole;
       }
       // offer side
       else {
-        const answer = JSON.parse(state.remoteSd);
-        await refs.pc.setRemoteDesc(answer);
+        const answer = JSON.parse(state.remoteParams);
+        await refs.pc.setServerParams(answer);
       }
 
       renderView($root, state, action);
@@ -107,8 +109,8 @@ function renderView($root, state, action) {
           <h4>Params to send</h4>
           <textarea
             onclick=${ev => ev.target.select()}
-            oninput=${ev => action.$update('localSd', ev.target.value)}
-          >${state.localSd}</textarea>
+            oninput=${ev => action.$update('localParams', ev.target.value)}
+          >${state.localParams}</textarea>
           <button
             onclick=${action.getParams}
             disabled=${state.iceRole !== ''}
@@ -118,8 +120,8 @@ function renderView($root, state, action) {
           <h4>Params to receive</h4>
           <textarea
             onclick=${ev => ev.target.select()}
-            oninput=${ev => action.$update('remoteSd', ev.target.value)}
-          >${state.remoteSd}</textarea>
+            oninput=${ev => action.$update('remoteParams', ev.target.value)}
+          >${state.remoteParams}</textarea>
           <button
             onclick=${action.setParams}
             disabled=${state.iceRole === 'controlled'}
