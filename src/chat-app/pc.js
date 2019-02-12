@@ -1,5 +1,5 @@
-import Eve from './events.js';
-import { ab2str, str2ab } from './utils.js';
+import Eve from '../shared/events.js';
+import { ab2str, str2ab } from '../shared/utils.js';
 
 // TODO: fix name
 export class PeerConnection extends Eve {
@@ -11,16 +11,33 @@ export class PeerConnection extends Eve {
     this.quic = new RTCQuicTransport(this.ice);
 
     this.ice.addEventListener('statechange', ev => {
-      if (ev.target.state === 'connected') {
-        this.trigger('iceConnected');
-      }
+      this.trigger(`ice:${ev.target.state}`);
     });
     this.quic.addEventListener('statechange', ev => {
-      if (ev.target.state === 'connected') {
-        this.trigger('quicConnected');
+      this.trigger(`quic:${ev.target.state}`);
+    });
+    this.quic.addEventListener('quicstream', async ev => {
+      const quicStream = ev.stream;
+
+      const CHUNK_SIZE = 256;
+      // need to wait first data
+      await quicStream.waitForReadable(CHUNK_SIZE);
+
+      let message = '';
+      let isAllDataRead = false;
+      while (!isAllDataRead) {
+        const buffer = new Uint8Array(CHUNK_SIZE);
+
+        const { finished } = quicStream.readInto(buffer);
+        message += new TextDecoder().decode(buffer);
+
+        isAllDataRead = finished;
       }
+
+      this.trigger('message', message);
     });
   }
+
   async createOffer() {
     const { ice, quic } = this;
 
@@ -67,16 +84,28 @@ export class PeerConnection extends Eve {
     quic.connect();
   }
 
+  sendText(text) {
+    const { quic } = this;
+
+    const quicStream = quic.createStream();
+    quicStream.write({
+      data: new TextEncoder().encode(text),
+      finish: true,
+    });
+  }
+
   _gatherAllCandidates() {
     const ice = this.ice;
 
     return new Promise((resolve, reject) => {
       ice.addEventListener('icecandidate', ev => {
-        if (ev.candidate === null) {
-          resolve();
+        if (ev.candidate !== null) {
+          return;
         }
+        ice.removeEventListener('error', reject);
+        resolve();
       });
-      ice.addEventListener('error', ev => reject(ev), { once: true });
+      ice.addEventListener('error', reject);
 
       ice.gather({
         gatherPolicy: 'all',

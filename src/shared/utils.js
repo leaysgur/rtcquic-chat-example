@@ -8,19 +8,6 @@ export function isSupportedBrowser(global) {
   ].every(key => key in global);
 }
 
-export function getRoomName(location) {
-  if (location.hash.length === 0) {
-    return null;
-  }
-
-  const hash = location.hash.slice(1);
-  if (/\d{8}/.test(hash) === false) {
-    return null;
-  }
-
-  return hash;
-}
-
 // from https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
 export function ab2str(buf) {
   return String.fromCharCode.apply(null, new Uint16Array(buf));
