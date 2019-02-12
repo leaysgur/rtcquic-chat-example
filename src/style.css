@@ -5,3 +5,8 @@ textarea {
 h2.header {
   color: #26a69a;
 }
+
+.loading {
+  padding-top: 25%;
+  text-align: center;
+}
