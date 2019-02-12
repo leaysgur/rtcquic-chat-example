@@ -1,6 +1,6 @@
 import Eve from '../shared/events.js';
 import { ab2str, str2ab } from '../shared/utils.js';
-import DataChannel from './dc.js';
+import DataChannel from './data-channel.js';
 
 // TODO: fix name
 export default class PeerConnection extends Eve {

@@ -1,5 +1,5 @@
 import { render, html } from '//unpkg.com/lighterhtml?module';
-import PeerConnection from './pc.js';
+import PeerConnection from './peer-connection.js';
 
 export default function($root) {
   const refs = {
